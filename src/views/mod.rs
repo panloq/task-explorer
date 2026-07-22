@@ -1,0 +1,11 @@
+pub mod overview;
+pub mod cpu;
+pub mod ram;
+pub mod processes;
+pub mod disks;
+pub mod network;
+pub mod system_info;
+pub mod settings;
+pub mod process_info;
+pub mod startup;
+pub mod details;
