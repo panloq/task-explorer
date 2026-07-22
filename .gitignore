@@ -1,4 +1,27 @@
-/target
+# Rust / Cargo
+/target/
+**/*.rs.bk
+*.rs.bk
 
-# Stakpak session files
-.stakpak/session*
+# IDEs and Editors
+.idea/
+.vscode/
+*.swp
+*.swo
+*.tmp
+*.bak
+
+# Tooling & Session files
+.stakpak/
+
+# OS / Environment generated
+Thumbs.db
+EhThumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store
+.env
+.env.local
+
+# Logs
+*.log
