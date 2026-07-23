@@ -20,7 +20,12 @@ Powered by low-level system access (`sysinfo` and native Windows APIs), TaskExpl
 * 🌍 **Multi-Language Support:** Fully translated into English, Polish, and Russian.
 
 ## 📸 Screenshots
-*(Add screenshots of the Overview, Processes, and Disk Manager here)*
+
+### System Performance Overview
+![System Performance Overview](screenshots/overview.png)
+
+### Process Manager (with live CPU mini-charts)
+![Process Manager](screenshots/processes.png)
 
 ## 🛠️ Technologies Used
 * **Rust** - Ensures memory safety and top-tier performance.
