@@ -22,10 +22,11 @@ Powered by low-level system access (`sysinfo` and native Windows APIs), TaskExpl
 ## 📸 Screenshots
 
 ### System Performance Overview
-![System Performance Overview](./screenshots/overview.png)
+<img width="994" height="669" alt="{D775C8E6-5C57-4D80-ACEB-8455B56AFA0D}" src="https://github.com/user-attachments/assets/5b2c7d93-983c-4126-8ebc-afce8b528bc0" />
+
 
 ### Process Manager (with live CPU mini-charts)
-<img width="994" height="669" alt="{D775C8E6-5C57-4D80-ACEB-8455B56AFA0D}" src="https://github.com/user-attachments/assets/5b2c7d93-983c-4126-8ebc-afce8b528bc0" />
+<img width="1006" height="648" alt="{166D7805-452A-4830-9B77-26E4557177A6}" src="https://github.com/user-attachments/assets/0da5b8f9-54bf-4902-994f-8b964c93f230" />
 
 
 ## 🛠️ Technologies Used
