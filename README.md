@@ -22,10 +22,10 @@ Powered by low-level system access (`sysinfo` and native Windows APIs), TaskExpl
 ## 📸 Screenshots
 
 ### System Performance Overview
-![System Performance Overview](screenshots/overview.png)
+![System Performance Overview](./screenshots/overview.png)
 
 ### Process Manager (with live CPU mini-charts)
-![Process Manager](screenshots/processes.png)
+![Process Manager](./screenshots/processes.png)
 
 ## 🛠️ Technologies Used
 * **Rust** - Ensures memory safety and top-tier performance.
