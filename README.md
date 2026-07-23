@@ -25,7 +25,8 @@ Powered by low-level system access (`sysinfo` and native Windows APIs), TaskExpl
 ![System Performance Overview](./screenshots/overview.png)
 
 ### Process Manager (with live CPU mini-charts)
-![Process Manager](./screenshots/processes.png)
+<img width="994" height="669" alt="{D775C8E6-5C57-4D80-ACEB-8455B56AFA0D}" src="https://github.com/user-attachments/assets/5b2c7d93-983c-4126-8ebc-afce8b528bc0" />
+
 
 ## 🛠️ Technologies Used
 * **Rust** - Ensures memory safety and top-tier performance.
