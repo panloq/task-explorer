@@ -36,16 +36,9 @@ Powered by low-level system access (`sysinfo` and native Windows APIs), TaskExpl
 
 ## 🚀 How to Run
 
-1. Make sure you have [Rust and Cargo](https://rustup.rs/) installed on your system.
-2. Clone this repository:
-   ```bash
-   git clone https://github.com/yourusername/task_explorer.git
-   cd task_explorer
-   ```
-3. Run the application:
-   ```bash
-   cargo run --release
-   ```
+1. Choose the task explorer.exe
+2. Run it
+
 
 ## 🤝 Contributing
 Contributions, issues, and feature requests are welcome! Feel free to check the issues page.
