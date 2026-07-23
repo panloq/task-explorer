@@ -49,6 +49,11 @@
   "proc_kill_tree": "Kill Process Tree",
   "proc_suspend": "Suspend",
   "proc_resume": "Resume",
+  "proc_eco_enable": "Enable Eco Mode",
+  "proc_eco_disable": "Disable Eco Mode",
+  "proc_eco_badge": "[ECO]",
+  "proc_boost_enable": "🚀 Boost Mode (Suspend bg)",
+  "proc_boost_disable": "🛑 Disable Boost (Resume)",
   "proc_suspended_badge": "[SUSPENDED]",
   "info_children": "Child Processes",
   "zombie_tooltip": "This process consumes no CPU or RAM. It is likely a zombie process and can be safely terminated.",
@@ -122,8 +127,9 @@
   "auto_refresh_label": "Auto refresh:",
   "settings_refresh_rate": "Auto Refresh Rate",
   "proc_subtab_processes": "Processes",
-  "proc_subtab_autostart": "Startup Apps",
+  "proc_subtab_autostart": "Startup",
   "proc_subtab_details": "Details",
+  "proc_subtab_anomalies": "Anomalies",
   "startup_title": "Startup Apps",
   "startup_col_name": "NAME",
   "startup_col_cmd": "COMMAND / TARGET",
@@ -131,5 +137,6 @@
   "startup_col_status": "STATUS",
   "startup_enabled": "Enabled",
   "startup_disabled": "Disabled",
-  "startup_open_location": "Open File Location"
+  "startup_open_location": "Open File Location",
+  "startup_remove": "Remove from startup"
 }

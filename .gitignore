@@ -12,7 +12,7 @@
 *.bak
 
 # Tooling & Session files
-.stakpak/
+.stakpak/session*
 
 # OS / Environment generated
 Thumbs.db

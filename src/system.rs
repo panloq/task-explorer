@@ -89,6 +89,7 @@ pub struct ProcessItem {
     pub total_written_bytes: u64,
     /// UNIX timestamp seconds when process started (0 = unknown)
     pub start_time: u64,
+    pub cpu_history: Vec<f32>,
 }
 
 impl ProcessItem {
@@ -159,6 +160,7 @@ pub struct SystemMonitor {
     last_update: Instant,
     prev_net_rx: HashMap<String, u64>,
     prev_net_tx: HashMap<String, u64>,
+    proc_cpu_history: HashMap<u32, std::collections::VecDeque<f32>>,
 }
 
 impl SystemMonitor {
@@ -177,16 +179,14 @@ impl SystemMonitor {
         let mut sys = System::new_with_specifics(refresh_kind);
         sys.refresh_all();
 
-        let disks = Disks::new_with_refreshed_list();
-        let networks = Networks::new_with_refreshed_list();
-
         Self {
             sys,
-            disks,
-            networks,
+            disks: Disks::new_with_refreshed_list(),
+            networks: Networks::new_with_refreshed_list(),
             last_update: Instant::now(),
             prev_net_rx: HashMap::new(),
             prev_net_tx: HashMap::new(),
+            proc_cpu_history: HashMap::new(),
         }
     }
 
@@ -278,50 +278,64 @@ impl SystemMonitor {
             .collect()
     }
 
-    pub fn process_list(&self) -> Vec<ProcessItem> {
+    pub fn process_list(&mut self) -> Vec<ProcessItem> {
+        const SPARKLINE_LEN: usize = 20;
         let num_cpus = self.sys.cpus().len().max(1) as f32;
-        self.sys
-            .processes()
-            .iter()
-            .map(|(&pid, process)| {
-                let disk_usage = process.disk_usage();
-                let exe_path = process
-                    .exe()
-                    .map(|p| p.to_string_lossy().into_owned())
-                    .unwrap_or_default();
-                
-                // Do not allocate memory or join command line arguments unless needed.
-                // Join only if it has arguments to avoid joining empty vectors.
-                let cmd_line = if process.cmd().is_empty() {
-                    String::new()
-                } else {
-                    process.cmd().join(" ".as_ref()).to_string_lossy().into_owned()
-                };
+        
+        let mut new_history: HashMap<u32, std::collections::VecDeque<f32>> = HashMap::new();
+        
+        let mut results = Vec::new();
 
-                let parent_pid = process.parent().map(|p| p.as_u32());
+        for (&pid, process) in self.sys.processes() {
+            let pid_u32 = pid.as_u32();
+            let disk_usage = process.disk_usage();
+            let exe_path = process
+                .exe()
+                .map(|p| p.to_string_lossy().into_owned())
+                .unwrap_or_default();
+            
+            let cmd_line = if !process.cmd().is_empty() {
+                process.cmd().join(std::ffi::OsStr::new(" ")).to_string_lossy().into_owned()
+            } else {
+                String::new()
+            };
 
-                // sysinfo reports cpu_usage per-core (e.g. 800% on 8 cores).
-                // Normalize to 0-100% range by dividing by number of logical CPUs.
-                let raw_cpu = process.cpu_usage();
-                let normalized_cpu = (raw_cpu / num_cpus).min(100.0);
+            let parent_pid = process.parent().map(|p| p.as_u32());
 
-                ProcessItem {
-                    pid: pid.as_u32(),
-                    parent_pid,
-                    name: process.name().to_string_lossy().into_owned(),
-                    exe_path,
-                    cmd_line,
-                    cpu_usage: normalized_cpu,
-                    memory_bytes: process.memory(),
-                    disk_read_bytes_sec: disk_usage.read_bytes,
-                    disk_write_bytes_sec: disk_usage.written_bytes,
-                    status: format!("{:?}", process.status()),
-                    total_read_bytes: disk_usage.total_read_bytes,
-                    total_written_bytes: disk_usage.total_written_bytes,
-                    start_time: process.start_time(),
-                }
-            })
-            .collect()
+            // sysinfo reports cpu_usage per-core (e.g. 800% on 8 cores).
+            // Normalize to 0-100% range by dividing by number of logical CPUs.
+            let raw_cpu = process.cpu_usage();
+            let normalized_cpu = (raw_cpu / num_cpus).min(100.0);
+
+            // Update sparkline history
+            let mut history = self.proc_cpu_history.remove(&pid_u32).unwrap_or_default();
+            history.push_back(normalized_cpu);
+            if history.len() > SPARKLINE_LEN {
+                history.pop_front();
+            }
+            let cpu_history_vec: Vec<f32> = history.iter().cloned().collect();
+            new_history.insert(pid_u32, history);
+
+            results.push(ProcessItem {
+                pid: pid_u32,
+                parent_pid,
+                name: process.name().to_string_lossy().into_owned(),
+                exe_path,
+                cmd_line,
+                cpu_usage: normalized_cpu,
+                memory_bytes: process.memory(),
+                disk_read_bytes_sec: disk_usage.read_bytes,
+                disk_write_bytes_sec: disk_usage.written_bytes,
+                status: format!("{:?}", process.status()),
+                total_read_bytes: disk_usage.total_read_bytes,
+                total_written_bytes: disk_usage.total_written_bytes,
+                start_time: process.start_time(),
+                cpu_history: cpu_history_vec,
+            });
+        }
+        
+        self.proc_cpu_history = new_history;
+        results
     }
 
     pub fn system_overview(&self) -> SystemOverview {
@@ -339,13 +353,28 @@ impl SystemMonitor {
         let sysinfo_pid = Pid::from_u32(pid_u32);
         if let Some(process) = self.sys.process(sysinfo_pid) {
             if process.kill() {
-                Ok(())
-            } else {
-                Err(format!("Failed to terminate process (PID: {})", pid_u32))
+                return Ok(());
             }
-        } else {
-            Err(format!("Process not found (PID: {})", pid_u32))
         }
+
+        #[cfg(target_os = "windows")]
+        {
+            let status = std::process::Command::new("powershell")
+                .args([
+                    "-NoProfile",
+                    "-Command",
+                    &format!("Start-Process taskkill -ArgumentList '/F /PID {}' -Verb RunAs -WindowStyle Hidden", pid_u32),
+                ])
+                .status();
+
+            if let Ok(s) = status {
+                if s.success() {
+                    return Ok(());
+                }
+            }
+        }
+
+        Err(format!("Failed to terminate process (PID: {})", pid_u32))
     }
 
     pub fn kill_process_tree(&mut self, root_pid: u32) -> Result<usize, String> {
@@ -363,10 +392,32 @@ impl SystemMonitor {
             }
         }
 
+        let total_nodes = pids_to_kill.len();
         let mut killed_count = 0;
-        for pid in pids_to_kill {
-            if self.kill_process(pid).is_ok() {
+        for pid in &pids_to_kill {
+            if self.kill_process(*pid).is_ok() {
                 killed_count += 1;
+            }
+        }
+
+        if killed_count == total_nodes && killed_count > 0 {
+            return Ok(killed_count);
+        }
+
+        #[cfg(target_os = "windows")]
+        {
+            let status = std::process::Command::new("powershell")
+                .args([
+                    "-NoProfile",
+                    "-Command",
+                    &format!("Start-Process taskkill -ArgumentList '/F /T /PID {}' -Verb RunAs -WindowStyle Hidden", root_pid),
+                ])
+                .status();
+
+            if let Ok(s) = status {
+                if s.success() {
+                    return Ok(total_nodes);
+                }
             }
         }
 
@@ -375,6 +426,37 @@ impl SystemMonitor {
         } else {
             Err(format!("Failed to kill process tree (PID: {})", root_pid))
         }
+    }
+
+
+
+    pub fn boost_mode_suspend_hogs(&mut self) -> Result<Vec<u32>, String> {
+        const HOG_APPS: &[&str] = &[
+            "chrome.exe", "msedge.exe", "firefox.exe", "brave.exe", "opera.exe",
+            "discord.exe", "slack.exe", "teams.exe", "skype.exe", "spotify.exe",
+            "onedrive.exe", "googledrivefs.exe", "dropbox.exe", "steamwebhelper.exe",
+            "epicgameslauncher.exe", "battlenet.exe"
+        ];
+        
+        let mut suspended_pids = Vec::new();
+        // Zbieramy PIDy znanych pożeraczy zasobów
+        let pids_to_suspend: Vec<u32> = self.sys.processes().iter()
+            .filter_map(|(&pid, process)| {
+                let name = process.name().to_string_lossy().to_lowercase();
+                if HOG_APPS.contains(&name.as_str()) {
+                    Some(pid.as_u32())
+                } else {
+                    None
+                }
+            }).collect();
+            
+        for pid in pids_to_suspend {
+            if self.suspend_process(pid).is_ok() {
+                suspended_pids.push(pid);
+            }
+        }
+        
+        Ok(suspended_pids)
     }
 
     pub fn suspend_process(&mut self, pid: u32) -> Result<(), String> {

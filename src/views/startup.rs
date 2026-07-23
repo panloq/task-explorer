@@ -40,48 +40,64 @@ pub fn render_startup_view<'a>(
         })
         .collect();
 
-    let selected_item = selected_index.and_then(|idx| items.get(idx));
-
     // Actions bar
     let mut actions = row![].spacing(8).align_y(Alignment::Center);
 
-    if let Some(item) = selected_item {
-        let cmd = item.command.clone();
-        let name = item.name.clone();
+    if let Some(idx) = selected_index {
+        if let Some(item) = items.get(idx) {
+            let cmd = item.command.clone();
+            let name = item.name.clone();
 
-        actions = actions
-            .push(
-                button(text(&lang.startup_open_location).size(12)
-                    .style(|_| text::Style { color: Some(Color::WHITE) }))
-                .padding([8, 14])
-                .on_press(Message::OpenStartupLocation(cmd.clone()))
-                .style(|_, status| button::Style {
-                    background: Some(iced::Background::Color(if status == button::Status::Hovered {
-                        Color::from_rgb(0.2, 0.6, 0.8)
-                    } else {
-                        Color::from_rgb(0.1, 0.5, 0.7)
-                    })),
-                    text_color: Color::WHITE,
-                    border: iced::Border { radius: 6.0.into(), ..Default::default() },
-                    shadow: Default::default(),
-                })
-            )
-            .push(
-                button(text(&lang.proc_search_online).size(12)
-                    .style(|_| text::Style { color: Some(Color::WHITE) }))
-                .padding([8, 14])
-                .on_press(Message::SearchProcessOnline(name))
-                .style(|_, status| button::Style {
-                    background: Some(iced::Background::Color(if status == button::Status::Hovered {
-                        Color::from_rgb(0.3, 0.5, 0.9)
-                    } else {
-                        Color::from_rgb(0.2, 0.4, 0.8)
-                    })),
-                    text_color: Color::WHITE,
-                    border: iced::Border { radius: 6.0.into(), ..Default::default() },
-                    shadow: Default::default(),
-                })
-            );
+            actions = actions
+                .push(
+                    button(text(&lang.startup_open_location).size(12)
+                        .style(|_| text::Style { color: Some(Color::WHITE) }))
+                    .padding([8, 14])
+                    .on_press(Message::OpenStartupLocation(cmd.clone()))
+                    .style(|_, status| button::Style {
+                        background: Some(iced::Background::Color(if status == button::Status::Hovered {
+                            Color::from_rgb(0.2, 0.6, 0.8)
+                        } else {
+                            Color::from_rgb(0.1, 0.5, 0.7)
+                        })),
+                        text_color: Color::WHITE,
+                        border: iced::Border { radius: 6.0.into(), ..Default::default() },
+                        shadow: Default::default(),
+                    })
+                )
+                .push(
+                    button(text(&lang.proc_search_online).size(12)
+                        .style(|_| text::Style { color: Some(Color::WHITE) }))
+                    .padding([8, 14])
+                    .on_press(Message::SearchProcessOnline(name))
+                    .style(|_, status| button::Style {
+                        background: Some(iced::Background::Color(if status == button::Status::Hovered {
+                            Color::from_rgb(0.3, 0.5, 0.9)
+                        } else {
+                            Color::from_rgb(0.2, 0.4, 0.8)
+                        })),
+                        text_color: Color::WHITE,
+                        border: iced::Border { radius: 6.0.into(), ..Default::default() },
+                        shadow: Default::default(),
+                    })
+                )
+                .push(
+                    button(text(&lang.startup_remove).size(12)
+                        .style(|_| text::Style { color: Some(Color::WHITE) }))
+                    .padding([8, 14])
+                    .on_press(Message::RemoveStartupItem(idx))
+                    .style(|_, status| button::Style {
+                        background: Some(iced::Background::Color(if status == button::Status::Hovered {
+                            Color::from_rgb(0.9, 0.25, 0.25)
+                        } else {
+                            Color::from_rgb(0.8, 0.2, 0.2)
+                        })),
+                        text_color: Color::WHITE,
+                        border: iced::Border { radius: 6.0.into(), ..Default::default() },
+                        shadow: Default::default(),
+                    })
+                );
+        }
     }
 
     let header_row = container(

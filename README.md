@@ -7,13 +7,16 @@ Powered by low-level system access (`sysinfo` and native Windows APIs), TaskExpl
 ## 🔥 Why TaskExplorer is Better (Key Features)
 
 * 🕵️ **Advanced Process Analytics & Anomaly Detection:**
+  * **Heuristic Anomaly Scanner:** Built-in scanner that looks for suspicious behavior, such as crypto-miners (high CPU without a parent process), fake system processes, or programs executing from temporary directories.
   * **Memory Leak Detection:** Automatically flags processes that continuously increase their RAM usage over time.
   * **Zombie Process Identification:** Detects suspended or dead processes (consuming 0% CPU and RAM) that can be safely terminated.
   * **Snapshots & Diff Mode:** Take a "snapshot" of currently running processes and enable "Diff Mode" later to instantly see exactly which new background processes were spawned and which were closed.
-* 💾 **SSD Wear Guard:** A unique feature in the Disk Manager that tracks the total amount of data written by a process since it started. This allows you to instantly detect rogue applications that are "hammering" your SSD with continuous gigabytes of background writes.
-* 🚀 **Startup Apps Manager:** Built-in startup manager that reads directly from the Windows Registry (HKCU/HKLM) and system folders, making it easy to locate and manage hidden autostart programs.
+* 🚀 **Boost Mode (Gaming Mode):** Instantly suspend resource-heavy background apps (like browsers, Discord, or Steam) with a single click to free up CPU cycles for your games. Easily resume them all when you are done.
+* 📈 **Live Mini-Charts (Sparklines):** Displays real-time CPU history graphs directly in the process list for every single process, giving you an immediate visual cue of a program's behavior.
+* 💾 **SSD Wear Guard:** A unique feature in the Disk Manager that tracks the total amount of data written by a process since it started. This allows you to instantly detect rogue applications that are "hammering" your SSD with continuous background writes.
+* ⚡ **Startup Apps Manager:** Built-in startup manager that reads directly from the Windows Registry (HKCU/HKLM) and system folders. Easily toggle apps on/off or **completely delete** them from autostart.
 * ⚙️ **Full Hardware & Disk Control:** Accurate statistics for CPU, RAM, network traffic, and an advanced Disks view (differentiating between HDD/SSD and tracking real-time I/O operations). Includes GPU model detection.
-* ⚡ **Extreme Optimization:** Written entirely in Rust. The interface switches tabs with **0 ms latency**. Smooth animations and full control over the auto-refresh rate protect your CPU from unnecessary load.
+* 🛡️ **Smart Privilege Management:** Runs smoothly as a standard user without annoying UAC prompts on every startup. It only requests Administrator privileges (via PowerShell RunAs) when performing advanced actions like terminating protected process trees.
 * 🌍 **Multi-Language Support:** Fully translated into English, Polish, and Russian.
 
 ## 📸 Screenshots
@@ -22,7 +25,7 @@ Powered by low-level system access (`sysinfo` and native Windows APIs), TaskExpl
 ## 🛠️ Technologies Used
 * **Rust** - Ensures memory safety and top-tier performance.
 * **Iced GUI** - A modern, cross-platform, and smooth user interface framework.
-* **Sysinfo / Winreg / Winres** - For low-level Windows system integration and privilege management.
+* **Sysinfo / Winreg** - For low-level Windows system integration and registry management.
 
 ## 🚀 How to Run
 
@@ -36,7 +39,6 @@ Powered by low-level system access (`sysinfo` and native Windows APIs), TaskExpl
    ```bash
    cargo run --release
    ```
-   *(Note: TaskExplorer requests Administrator privileges on Windows to properly manage system processes and read registry keys).*
 
 ## 🤝 Contributing
 Contributions, issues, and feature requests are welcome! Feel free to check the issues page.

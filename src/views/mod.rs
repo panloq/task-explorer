@@ -9,3 +9,4 @@ pub mod settings;
 pub mod process_info;
 pub mod startup;
 pub mod details;
+pub mod anomalies;

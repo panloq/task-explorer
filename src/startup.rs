@@ -91,3 +91,82 @@ pub fn open_file_location(cmd_path: &str) {
         }
     }
 }
+
+#[cfg(target_os = "windows")]
+pub fn remove_startup_item(item: &StartupItem) -> Result<(), String> {
+    use winreg::enums::*;
+    use winreg::RegKey;
+
+    if item.location.contains("HKCU") {
+        let hkcu = RegKey::predef(HKEY_CURRENT_USER);
+        if let Ok(key) = hkcu.open_subkey_with_flags("Software\\Microsoft\\Windows\\CurrentVersion\\Run", KEY_SET_VALUE) {
+            if key.delete_value(&item.name).is_ok() {
+                return Ok(());
+            }
+        }
+        Err(format!("Failed to delete registry key '{}' from HKCU Run", item.name))
+    } else if item.location.contains("HKLM") {
+        let hklm = RegKey::predef(HKEY_LOCAL_MACHINE);
+        let mut deleted = false;
+        if let Ok(key) = hklm.open_subkey_with_flags("Software\\Microsoft\\Windows\\CurrentVersion\\Run", KEY_SET_VALUE) {
+            if key.delete_value(&item.name).is_ok() {
+                deleted = true;
+            }
+        }
+        if deleted {
+            return Ok(());
+        }
+
+        // Elevate via UAC if standard write to HKLM fails
+        let status = std::process::Command::new("powershell")
+            .args([
+                "-NoProfile",
+                "-Command",
+                &format!(
+                    "Start-Process reg -ArgumentList 'delete \"HKLM\\Software\\Microsoft\\Windows\\CurrentVersion\\Run\" /v \"{}\" /f' -Verb RunAs -WindowStyle Hidden",
+                    item.name
+                ),
+            ])
+            .status();
+
+        if let Ok(s) = status {
+            if s.success() {
+                return Ok(());
+            }
+        }
+
+        Err(format!("Failed to delete registry key '{}' from HKLM Run (access denied)", item.name))
+    } else if item.location.contains("Startup Folder") {
+        let path = std::path::Path::new(&item.command);
+        if path.exists() {
+            if std::fs::remove_file(path).is_ok() {
+                return Ok(());
+            }
+            // Elevate via UAC if permission denied
+            let status = std::process::Command::new("powershell")
+                .args([
+                    "-NoProfile",
+                    "-Command",
+                    &format!(
+                        "Start-Process powershell -ArgumentList '-NoProfile -Command Remove-Item -Path \"{}\" -Force' -Verb RunAs -WindowStyle Hidden",
+                        item.command
+                    ),
+                ])
+                .status();
+
+            if let Ok(s) = status {
+                if s.success() {
+                    return Ok(());
+                }
+            }
+        }
+        Err(format!("Failed to remove file '{}' from Startup folder", item.name))
+    } else {
+        Err(format!("Unknown startup item location: {}", item.location))
+    }
+}
+
+#[cfg(not(target_os = "windows"))]
+pub fn remove_startup_item(_item: &StartupItem) -> Result<(), String> {
+    Err("Startup management is only supported on Windows".to_string())
+}

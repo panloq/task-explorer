@@ -49,7 +49,12 @@
   "proc_kill_tree": "Завершить дерево процессов",
   "proc_suspend": "Приостановить",
   "proc_resume": "Возобновить",
-  "proc_suspended_badge": "[ПРИОСТАНОВЛЕН]",
+  "proc_eco_enable": "Включить Эко-режим",
+  "proc_eco_disable": "Отключить Эко-режим",
+  "proc_eco_badge": "[ЭКО]",
+  "proc_boost_enable": "🚀 Режим Boost (Уснуть фон)",
+  "proc_boost_disable": "🛑 Отключить Boost (Возобновить)",
+  "proc_suspended_badge": "[ПРИОСТАНОВЛЕНО]",
   "info_children": "Дочерние процессы",
   "zombie_tooltip": "Этот процесс не использует ЦП и ОЗУ. Вероятно, это зомби-процесс, и его можно безопасно завершить.",
   "info_title": "Детали процесса",
@@ -124,6 +129,7 @@
   "proc_subtab_processes": "Процессы",
   "proc_subtab_autostart": "Автозагрузка",
   "proc_subtab_details": "Подробности",
+  "proc_subtab_anomalies": "Аномалии",
   "startup_title": "Автозагрузка приложений",
   "startup_col_name": "ИМЯ",
   "startup_col_cmd": "КОМАНДА / ПУТЬ",
@@ -131,5 +137,6 @@
   "startup_col_status": "СТАТУС",
   "startup_enabled": "Включено",
   "startup_disabled": "Отключено",
-  "startup_open_location": "Открыть расположение файла"
+  "startup_open_location": "Открыть расположение файла",
+  "startup_remove": "Удалить из автозагрузки"
 }

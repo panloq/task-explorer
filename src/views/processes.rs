@@ -14,12 +14,12 @@ pub fn render_processes_view<'a>(
     sort_key: SortKey,
     sort_ascending: bool,
     selected_pid: Option<u32>,
-    status_message: Option<&'a str>,
     snapshot_taken: bool,
     diff_mode: bool,
     snapshot_pids: &'a std::collections::HashSet<u32>,
     mem_leaks: &'a std::collections::HashSet<u32>,
     suspended_pids: &'a std::collections::HashSet<u32>,
+    boost_active: bool,
     lang: &'a Lang,
 ) -> Element<'a, Message> {
     let selected_proc = selected_pid.and_then(|pid| processes.iter().find(|p| p.pid == pid));
@@ -115,8 +115,47 @@ pub fn render_processes_view<'a>(
             border: iced::Border { color: ThemeColors::CARD_BORDER, width: 1.0, radius: 6.0.into() },
             shadow: Default::default(),
         });
+        
+        let boost_btn = if boost_active {
+            button(
+                text(&lang.proc_boost_disable).size(12)
+                    .style(|_| text::Style { color: Some(Color::WHITE) })
+            )
+            .padding([6, 12])
+            .on_press(Message::ToggleBoostMode)
+            .style(|_, status| button::Style {
+                background: Some(iced::Background::Color(if status == button::Status::Hovered {
+                    Color::from_rgb(0.9, 0.4, 0.1)
+                } else {
+                    Color::from_rgb(0.8, 0.3, 0.0)
+                })),
+                text_color: Color::WHITE,
+                border: iced::Border { color: Color::from_rgb(0.9, 0.4, 0.1), width: 1.0, radius: 6.0.into() },
+                shadow: Default::default(),
+            })
+        } else {
+            button(
+                text(&lang.proc_boost_enable).size(12)
+                    .style(|_| text::Style { color: Some(Color::WHITE) })
+            )
+            .padding([6, 12])
+            .on_press(Message::ToggleBoostMode)
+            .style(|_, status| button::Style {
+                background: Some(iced::Background::Color(if status == button::Status::Hovered {
+                    Color::from_rgb(0.7, 0.1, 0.9)
+                } else {
+                    Color::from_rgb(0.6, 0.0, 0.8)
+                })),
+                text_color: Color::WHITE,
+                border: iced::Border { color: Color::from_rgb(0.7, 0.1, 0.9), width: 1.0, radius: 6.0.into() },
+                shadow: Default::default(),
+            })
+        };
+
         snapshot_row = snapshot_row
             .push(Space::with_width(Length::Fixed(8.0)))
+            .push(boost_btn)
+            .push(Space::with_width(Length::Fixed(16.0)))
             .push(diff_btn)
             .push(Space::with_width(Length::Fixed(8.0)))
             .push(clear_btn);
@@ -126,11 +165,7 @@ pub fn render_processes_view<'a>(
         .size(13)
         .style(|_| text::Style { color: Some(ThemeColors::TEXT_MUTED) });
 
-    let status_el: Element<Message> = if let Some(msg) = status_message {
-        text(msg).size(12)
-            .style(|_| text::Style { color: Some(ThemeColors::DANGER) })
-            .into()
-    } else if snapshot_taken {
+    let status_el: Element<Message> = if snapshot_taken {
         text(&lang.proc_snapshot_active).size(12)
             .style(|_| text::Style { color: Some(ThemeColors::NET_ACCENT) })
             .into()
@@ -176,6 +211,8 @@ pub fn render_processes_view<'a>(
                 shadow: Default::default(),
             })
         };
+
+
 
         actions = actions
             .push(
@@ -353,6 +390,30 @@ pub fn render_processes_view<'a>(
                 .push(Space::with_width(Length::Fixed(4.0)));
         }
 
+        let mut sparkline_row = row![].spacing(1).height(Length::Fixed(12.0)).align_y(Alignment::End);
+        for &cpu_val in &proc.cpu_history {
+            let h_pct = (cpu_val / 100.0).clamp(0.05, 1.0) as f32;
+            let h_pixels = h_pct * 12.0;
+            let bar_color = if cpu_val > 50.0 { ThemeColors::DANGER }
+                else if cpu_val > 20.0 { ThemeColors::RAM_ACCENT }
+                else { ThemeColors::CPU_ACCENT };
+            
+            sparkline_row = sparkline_row.push(
+                container(Space::with_width(Length::Fixed(0.0)))
+                    .width(Length::Fixed(2.0))
+                    .height(Length::Fixed(h_pixels))
+                    .style(move |_| container::Style {
+                        background: Some(iced::Background::Color(bar_color)),
+                        ..Default::default()
+                    })
+            );
+        }
+        
+        let cpu_col = column![
+            text(format!("{:.1}%", proc.cpu_usage)).size(12).style(move |_| text::Style { color: Some(cpu_color) }),
+            sparkline_row
+        ].width(Length::Fixed(90.0)).spacing(2);
+
         row_content = row_content
             .push(
                 text(proc.pid.to_string())
@@ -366,12 +427,7 @@ pub fn render_processes_view<'a>(
                     .width(Length::Fill)
                     .style(move |_| text::Style { color: Some(text_color) }),
             )
-            .push(
-                text(format!("{:.1}%", proc.cpu_usage))
-                    .size(12)
-                    .width(Length::Fixed(90.0))
-                    .style(move |_| text::Style { color: Some(cpu_color) }),
-            )
+            .push(cpu_col)
             .push(
                 text(format_bytes(proc.memory_bytes))
                     .size(12)

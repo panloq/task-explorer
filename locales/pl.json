@@ -49,6 +49,11 @@
   "proc_kill_tree": "Zakończ drzewo procesów",
   "proc_suspend": "Wstrzymaj",
   "proc_resume": "Wznów",
+  "proc_eco_enable": "Włącz Tryb Eco",
+  "proc_eco_disable": "Wyłącz Tryb Eco",
+  "proc_eco_badge": "[ECO]",
+  "proc_boost_enable": "🚀 Tryb Boost (Uśpij Tło)",
+  "proc_boost_disable": "🛑 Wyłącz Boost (Wznów)",
   "proc_suspended_badge": "[WSTRZYMANY]",
   "info_children": "Procesy potomne",
   "zombie_tooltip": "Ten proces nie zużywa CPU ani RAM. Prawdopodobnie jest to proces zombie i można go bezpiecznie zakończyć.",
@@ -124,6 +129,7 @@
   "proc_subtab_processes": "Procesy",
   "proc_subtab_autostart": "Aplikacje autostartu",
   "proc_subtab_details": "Szczegóły",
+  "proc_subtab_anomalies": "Anomalie",
   "startup_title": "Aplikacje autostartu",
   "startup_col_name": "NAZWA",
   "startup_col_cmd": "POLECENIE / ŚCIEŻKA",
@@ -131,5 +137,6 @@
   "startup_col_status": "STATUS",
   "startup_enabled": "Włączone",
   "startup_disabled": "Wyłączone",
-  "startup_open_location": "Otwórz lokalizację pliku"
+  "startup_open_location": "Otwórz lokalizację pliku",
+  "startup_remove": "Usuń z autostartu"
 }

@@ -47,6 +47,7 @@ pub enum ProcessesSubTab {
     Processes,
     Startup,
     Details,
+    Anomalies,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -78,7 +79,7 @@ pub enum Message {
     ProcessesSubTabSelected(ProcessesSubTab),
     SelectStartupItem(Option<usize>),
     OpenStartupLocation(String),
-    ProcessSelected(Option<u32>),
+    RemoveStartupItem(usize),
     KillProcess(u32),
     KillProcessTree(u32),
     SuspendProcess(u32),
@@ -91,15 +92,13 @@ pub enum Message {
     TakeSnapshot,
     ClearSnapshot,
     ToggleDiffMode,
+    ToggleBoostMode,
     // Settings
     SetLanguage(Language),
     SetRefreshRate(f32),
-    // Loading state for UI actions
-    StartLoading,
     // Animation tick for loading screen
-    AnimationTick(std::time::Instant),
-    StopLoading,
-    // New: load processes immediately when tab opened
+    AnimationTick,
+    // Immediate process reload
     LoadProcessesNow,
 }
 
@@ -141,6 +140,8 @@ pub struct TaskExplorerApp {
     diff_mode: bool,
 
     suspended_pids: HashSet<u32>,
+    boost_active: bool,
+    boost_suspended_pids: HashSet<u32>,
 
     processes_subtab: ProcessesSubTab,
     processes_expanded: bool,
@@ -211,6 +212,8 @@ impl TaskExplorerApp {
             diff_mode: false,
 
             suspended_pids: HashSet::new(),
+            boost_active: false,
+            boost_suspended_pids: HashSet::new(),
 
             processes_subtab: ProcessesSubTab::Processes,
             processes_expanded: true,
@@ -271,12 +274,10 @@ impl TaskExplorerApp {
                 );
             },
             
-            Message::AnimationTick(_) => {
+            Message::AnimationTick => {
                 // Ticking state forces iced to redraw and query view()
                 Task::none()
             }
-            Message::StartLoading => Task::none(),
-            Message::StopLoading => Task::none(),
             Message::FastDataUpdated(cpu, memory) => {
                 self.cpu = cpu;
                 self.memory = memory;
@@ -309,6 +310,7 @@ impl TaskExplorerApp {
                 self.show_process_info = false;
                 if tab == Tab::Processes {
                     self.processes_expanded = true;
+                    return self.update(Message::LoadProcessesNow);
                 }
                 Task::none()
             },
@@ -399,13 +401,22 @@ impl TaskExplorerApp {
                 crate::startup::open_file_location(&cmd);
                 Task::none()
             },
-            Message::ProcessSelected(pid) => {
-                self.selected_pid = pid;
-                self.status_message = None;
-                self.show_process_info = false;
-                self.loading = false;
+            Message::RemoveStartupItem(idx) => {
+                if let Some(item) = self.startup_items.get(idx).cloned() {
+                    match crate::startup::remove_startup_item(&item) {
+                        Ok(_) => {
+                            self.status_message = Some(format!("Removed '{}' from startup.", item.name));
+                            self.startup_items = crate::startup::fetch_startup_items();
+                            self.selected_startup_index = None;
+                        }
+                        Err(err) => {
+                            self.status_message = Some(err);
+                        }
+                    }
+                }
                 Task::none()
-            }
+            },
+
             Message::KillProcess(pid) => {
                 self.show_process_info = false;
                 let monitor = Arc::clone(&self.monitor);
@@ -505,6 +516,7 @@ impl TaskExplorerApp {
                 }
                 Task::none()
             }
+
             Message::SearchProcessOnline(name) => {
                 let url = format!("https://www.google.com/search?q={}+process+security+info", name);
                 let _ = std::process::Command::new("cmd").args(["/C", "start", &url]).spawn();
@@ -534,6 +546,45 @@ impl TaskExplorerApp {
             Message::ToggleDiffMode => {
                 self.diff_mode = !self.diff_mode;
                 Task::none()
+            }
+            Message::ToggleBoostMode => {
+                if self.boost_active {
+                    // Restore suspended pids
+                    self.boost_active = false;
+                    let pids_to_resume: Vec<u32> = self.boost_suspended_pids.iter().cloned().collect();
+                    let monitor = Arc::clone(&self.monitor);
+                    let mut resumed_count = 0;
+                    {
+                        let mut mon = monitor.lock().unwrap();
+                        for pid in pids_to_resume {
+                            if mon.resume_process(pid).is_ok() {
+                                resumed_count += 1;
+                            }
+                        }
+                    }
+                    self.suspended_pids.retain(|pid| !self.boost_suspended_pids.contains(pid));
+                    self.boost_suspended_pids.clear();
+                    self.status_message = Some(format!("Boost Mode disabled. Resumed {} apps.", resumed_count));
+                } else {
+                    // Activate boost mode
+                    let monitor = Arc::clone(&self.monitor);
+                    let mut mon = monitor.lock().unwrap();
+                    match mon.boost_mode_suspend_hogs() {
+                        Ok(suspended) => {
+                            self.boost_active = true;
+                            self.boost_suspended_pids = suspended.iter().cloned().collect();
+                            for pid in suspended {
+                                self.suspended_pids.insert(pid);
+                            }
+                            self.status_message = Some(format!("Boost Mode enabled. Suspended {} background apps.", self.boost_suspended_pids.len()));
+                        }
+                        Err(e) => {
+                            self.status_message = Some(format!("Failed to activate Boost Mode: {}", e));
+                        }
+                    }
+                }
+                // Force UI update
+                return self.update(Message::TickSlow);
             }
             Message::RefreshProcesses(processes) => {
                 if processes.is_empty() {
@@ -594,7 +645,7 @@ impl TaskExplorerApp {
         let mut subs = vec![];
         if self.loading && self.processes.is_empty() {
             // High frequency tick (e.g. 30fps = 33ms) for smooth progress animation during loading screen
-            subs.push(iced::time::every(Duration::from_millis(33)).map(|t| Message::AnimationTick(t)));
+            subs.push(iced::time::every(Duration::from_millis(33)).map(|_| Message::AnimationTick));
         } else {
             let refresh_millis = (self.config.refresh_rate * 1000.0) as u64;
             // Fast updates for CPU/memory (always needed) - slower frequency to save CPU/GPU resources
@@ -769,6 +820,8 @@ impl TaskExplorerApp {
                         subtab_btn(ProcessesSubTab::Startup, &self.lang.proc_subtab_autostart),
                         Space::with_width(Length::Fixed(8.0)),
                         subtab_btn(ProcessesSubTab::Details, &self.lang.proc_subtab_details),
+                        Space::with_width(Length::Fixed(8.0)),
+                        subtab_btn(ProcessesSubTab::Anomalies, &self.lang.proc_subtab_anomalies),
                     ]
                     .align_y(Alignment::Center)
                 )
@@ -781,12 +834,12 @@ impl TaskExplorerApp {
                         self.sort_key,
                         self.sort_ascending,
                         self.selected_pid,
-                        self.status_message.as_deref(),
                         self.snapshot_taken,
                         self.diff_mode,
                         &self.snapshot_pids,
                         &self.leak_pids,
                         &self.suspended_pids,
+                        self.boost_active,
                         &self.lang,
                     ),
                     ProcessesSubTab::Startup => render_startup_view(
@@ -801,6 +854,10 @@ impl TaskExplorerApp {
                         self.sort_key,
                         self.sort_ascending,
                         self.selected_pid,
+                        &self.lang,
+                    ),
+                    ProcessesSubTab::Anomalies => crate::views::anomalies::render_anomalies_view(
+                        &self.filtered_processes,
                         &self.lang,
                     ),
                 };
@@ -842,7 +899,29 @@ impl TaskExplorerApp {
                 ..Default::default()
             });
 
-        row![sidebar, content_container]
+        let mut main_col = column![content_container].width(Length::Fill).height(Length::Fill);
+
+        if let Some(msg) = &self.status_message {
+            let is_error = msg.starts_with("Error") || msg.starts_with("Failed");
+            let color = if is_error { ThemeColors::DANGER } else { ThemeColors::TEXT_PRIMARY };
+            
+            let status_bar = container(text(msg).size(12).style(move |_| text::Style { color: Some(color) }))
+                .width(Length::Fill)
+                .padding([4, 16])
+                .style(|_| container::Style {
+                    background: Some(iced::Background::Color(ThemeColors::CARD_BG)),
+                    border: iced::Border {
+                        color: ThemeColors::CARD_BORDER,
+                        width: 1.0,
+                        radius: 0.0.into()
+                    },
+                    ..Default::default()
+                });
+                
+            main_col = main_col.push(status_bar);
+        }
+
+        row![sidebar, main_col]
             .width(Length::Fill)
             .height(Length::Fill)
             .into()
@@ -913,6 +992,7 @@ impl TaskExplorerApp {
 
     /// Linear regression slope of memory_history for RAM forecast.
     /// Returns MB/tick (positive = growing).
+    #[allow(dead_code)]
     pub fn memory_trend_mb_per_tick(&self) -> f64 {
         let n = self.memory_history.len() as f64;
         if n < 10.0 { return 0.0; }

@@ -42,6 +42,7 @@ pub struct Lang {
     pub proc_subtab_processes: String,
     pub proc_subtab_autostart: String,
     pub proc_subtab_details: String,
+    pub proc_subtab_anomalies: String,
     pub startup_title: String,
     pub startup_col_name: String,
     pub startup_col_cmd: String,
@@ -50,6 +51,7 @@ pub struct Lang {
     pub startup_enabled: String,
     pub startup_disabled: String,
     pub startup_open_location: String,
+    pub startup_remove: String,
     pub proc_search_placeholder: String,
     pub proc_count: String,
     pub proc_sort_asc: String,
@@ -74,6 +76,9 @@ pub struct Lang {
     pub proc_kill_tree: String,
     pub proc_suspend: String,
     pub proc_resume: String,
+
+    pub proc_boost_enable: String,
+    pub proc_boost_disable: String,
     pub proc_suspended_badge: String,
     pub info_children: String,
 
